@@ -7,6 +7,10 @@ description: Get structured rows from a website, or repeat a task on one, throug
 
 Valendata turns a website task into a **skill**: a saved task that takes inputs and returns rows in the same shape every time, and repairs itself when the site changes. A **workflow** chains skills and other steps. Every run spends credits from the user's account.
 
+## If you can run shell commands, use the CLI
+
+With `VALENDATA_API_KEY` set (or after `npx valendata login`), the `valendata` CLI does everything below in short commands with JSON output, and loads no tool list: `npx valendata search "<task>"`, `npx valendata clone <slug>`, `npx valendata info <slug>`, `npx valendata run <slug> key=value --max 20`, `npx valendata scrape <url>`. `npx valendata help` lists every command. Use the MCP tools when you cannot run commands (a chat app).
+
 ## First, check the tools
 
 The tools come from the MCP server named `valendata`: `search_skills`, `list_skills`, `run_skill`, `get_run`, and a `skill_<slug>` tool for each of the user's most used skills (up to 20).

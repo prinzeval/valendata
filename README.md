@@ -87,6 +87,19 @@ After you sign in, ask your agent:
 
 More prompts are in [examples/prompts.md](examples/prompts.md).
 
+## Use it from the terminal
+
+Agents that can run commands (Claude Code, Codex, Cursor) do best with the CLI: short commands, JSON out, no tool list to load.
+
+```bash
+export VALENDATA_API_KEY="vd_sk_..."
+npx valendata search "google maps dentists"
+npx valendata run google-maps-places-scraper search_query=dentist "location=Austin, TX" --max 10
+npx valendata scrape https://news.ycombinator.com
+```
+
+All commands: [cli/README.md](cli/README.md).
+
 ## Use it from code
 
 The same account works over plain HTTP with an API key (**Settings → API Keys** in the app):

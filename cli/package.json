@@ -1,0 +1,14 @@
+{
+  "name": "valendata",
+  "version": "0.1.0",
+  "description": "Valendata from the terminal: run self-healing website skills, scrape, map and search the web, run workflows. Built for coding agents (Claude Code, Codex, Cursor) and people.",
+  "type": "module",
+  "bin": { "valendata": "bin/valendata.mjs" },
+  "files": ["bin", "src", "README.md"],
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "homepage": "https://docs.valendata.com",
+  "repository": { "type": "git", "url": "git+https://github.com/prinzeval/valendata.git", "directory": "cli" },
+  "keywords": ["valendata", "web-scraping", "scraper", "cli", "ai-agents", "claude-code", "codex", "data-extraction", "api"],
+  "scripts": { "test": "node --test \"tests/*.test.mjs\"" }
+}
