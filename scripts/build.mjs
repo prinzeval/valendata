@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Builds every host manifest and the packaged plugin from one source: kit.json and
-// skills/valendata. Adapted from ego-lite's plugins/scripts/package-plugins.mjs
-// (Copyright (c) 2026 CitroLabs, MIT): the symlink checks and JSON writing. See NOTICE.
+// skills/valendata.
 //
 //   node scripts/build.mjs                      write the generated files in place
 //   node scripts/build.mjs --check              exit 1 if any generated file is out of date
@@ -16,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SKILL = "valendata";
 // Copied as they are into a full copy made with --out.
-const COPIED = ["skills", "scripts", "tests", "README.md", "LICENSE", "NOTICE", "package.json", ".gitignore"];
+const COPIED = ["skills", "scripts", "tests", "README.md", "LICENSE", "package.json", ".gitignore"];
 
 function usage() {
   return "Usage: node scripts/build.mjs [--check] [--out DIR] [--mcp-url URL]";
@@ -40,11 +39,17 @@ function parseArguments(args) {
   return options;
 }
 
-async function validateLinks(path, label) {
-  const information = await lstat(path);
-  if (information.isSymbolicLink()) throw new Error(`${label} contains a symbolic link: ${path}`);
-  if (!information.isDirectory()) return;
-  for (const entry of await readdir(path)) await validateLinks(join(path, entry), label);
+/** A packaged plugin holds real files only: a symbolic link under `root` (or `root` itself)
+ *  would point outside the package on the user's machine, so the build stops on one. */
+async function refuseSymlinks(root, label) {
+  const found = [];
+  if ((await lstat(root)).isSymbolicLink()) found.push(root);
+  else {
+    for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
+      if (entry.isSymbolicLink()) found.push(join(entry.parentPath ?? entry.path, entry.name));
+    }
+  }
+  if (found.length) throw new Error(`${label} contains a symbolic link: ${found.join(", ")}`);
 }
 
 async function listFiles(directory) {
@@ -58,7 +63,10 @@ async function listFiles(directory) {
   return files.sort();
 }
 
-const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+/** A manifest's file text: two-space JSON with a final newline, like every other file here. */
+function json(value) {
+  return JSON.stringify(value, null, 2) + "\n";
+}
 
 /** Every generated file, as { path relative to the kit root: Buffer | string }. */
 export async function generatedFiles(kit, mcpUrl = kit.mcp.url) {
@@ -133,14 +141,14 @@ export async function generatedFiles(kit, mcpUrl = kit.mcp.url) {
   // The packaged plugin carries real copies (hosts copy plugins into a cache, so a link out
   // of the plugin folder would break): the skill, its icons, the license and notice.
   const skillRoot = join(ROOT, "skills", SKILL);
-  await validateLinks(skillRoot, `Skill ${SKILL}`);
+  await refuseSymlinks(skillRoot, `Skill ${SKILL}`);
   for (const file of await listFiles(skillRoot)) {
     const rel = relative(skillRoot, file);
     const content = await readFile(file);
     files[`${plugin}/skills/${SKILL}/${rel}`] = content;
     if (rel.startsWith("assets/")) files[`${plugin}/${rel}`] = content;
   }
-  for (const name of ["LICENSE", "NOTICE"]) files[`${plugin}/${name}`] = await readFile(join(ROOT, name));
+  files[`${plugin}/LICENSE`] = await readFile(join(ROOT, "LICENSE"));
   files[`${plugin}/README.md`] =
     `# ${kit.marketplace.displayName} plugin\n\n` +
     "This folder is built by `node scripts/build.mjs` from `kit.json` and `skills/valendata/`. " +

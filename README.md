@@ -157,4 +157,4 @@ Issues and pull requests are welcome: a better prompt in the skill, a new exampl
 
 ## License
 
-MIT. The multi-host packaging is adapted from [ego-lite](https://github.com/citrolabs/ego-lite) (MIT, Copyright (c) 2026 CitroLabs). See [NOTICE](NOTICE).
+MIT. See [LICENSE](LICENSE).

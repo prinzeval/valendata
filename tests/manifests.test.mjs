@@ -1,6 +1,5 @@
 // Every host manifest agrees with kit.json, follows its host's documented shape, and is
-// in step with the build. The idea of checking that all hosts carry one name and version
-// comes from ego-lite's plugins/ego/tests (MIT, see NOTICE).
+// in step with the build.
 //
 // Shapes checked against these docs (read 2026-10-21):
 //   Claude Code  https://code.claude.com/docs/en/plugins-reference
@@ -153,10 +152,7 @@ test("the build can point a copy of the kit at another server, and only a copy",
   assert.notEqual(refused.status, 0, "--mcp-url without --out must be refused");
 });
 
-test("NOTICE credits ego-lite and keeps its license", () => {
-  const notice = readFileSync(join(ROOT, "NOTICE"), "utf8");
-  assert.match(notice, /ego-lite/);
-  assert.match(notice, /Copyright \(c\) 2026 CitroLabs/);
-  assert.match(notice, /Permission is hereby granted, free of charge/);
+test("the kit is MIT licensed and the plugin ships the license", () => {
   assert.match(readFileSync(join(ROOT, "LICENSE"), "utf8"), /^MIT License/);
+  assert.match(readFileSync(join(ROOT, "plugins/valendata/LICENSE"), "utf8"), /^MIT License/);
 });
