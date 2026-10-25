@@ -1,0 +1,43 @@
+{
+  "name": "valendata",
+  "version": "0.3.0",
+  "description": "Valendata for AI coding agents: the Valendata MCP server (sign in through the browser) and a skill that teaches the agent to find, clone, run, create and schedule Valendata skills and workflows.",
+  "author": {
+    "name": "Valendata",
+    "email": "info@valendata.com",
+    "url": "https://www.valendata.com"
+  },
+  "homepage": "https://docs.valendata.com/ai-assistants/agent-kit",
+  "repository": "https://github.com/prinzeval/valendata",
+  "license": "MIT",
+  "keywords": ["valendata", "mcp", "web-data", "scraping", "browser-automation", "api"],
+  "marketplace": {
+    "name": "valendata",
+    "displayName": "Valendata",
+    "description": "The Valendata plugin: the Valendata MCP server and the Valendata skill."
+  },
+  "mcp": {
+    "name": "valendata",
+    "url": "https://api.valendata.com/mcp"
+  },
+  "codex": {
+    "category": "Productivity",
+    "interface": {
+      "displayName": "Valendata",
+      "shortDescription": "Website data as rows, through your Valendata skills",
+      "longDescription": "Find, clone, run, create and schedule Valendata skills and workflows. Each skill takes inputs and returns rows from a website in the same shape every time, and repairs itself when the site changes. Every run spends credits from your Valendata account.",
+      "developerName": "Valendata",
+      "category": "Productivity",
+      "capabilities": ["Interactive", "Read", "Write"],
+      "websiteURL": "https://www.valendata.com",
+      "privacyPolicyURL": "https://www.valendata.com/privacy-policy",
+      "termsOfServiceURL": "https://www.valendata.com/terms-and-conditions",
+      "defaultPrompt": [
+        "Use Valendata to find a skill that lists 20 laptops on eBay under $500, then run it."
+      ],
+      "brandColor": "#059669",
+      "composerIcon": "./assets/icon.png",
+      "logo": "./assets/logo.png"
+    }
+  }
+}

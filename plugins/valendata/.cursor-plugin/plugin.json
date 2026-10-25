@@ -1,0 +1,29 @@
+{
+  "name": "valendata",
+  "version": "0.3.0",
+  "description": "Valendata for AI coding agents: the Valendata MCP server (sign in through the browser) and a skill that teaches the agent to find, clone, run, create and schedule Valendata skills and workflows.",
+  "author": {
+    "name": "Valendata",
+    "email": "info@valendata.com",
+    "url": "https://www.valendata.com"
+  },
+  "homepage": "https://docs.valendata.com/ai-assistants/agent-kit",
+  "repository": "https://github.com/prinzeval/valendata",
+  "license": "MIT",
+  "keywords": [
+    "valendata",
+    "mcp",
+    "web-data",
+    "scraping",
+    "browser-automation",
+    "api"
+  ],
+  "displayName": "Valendata",
+  "logo": "assets/logo.png",
+  "skills": "./skills/",
+  "mcpServers": {
+    "valendata": {
+      "url": "https://api.valendata.com/mcp"
+    }
+  }
+}

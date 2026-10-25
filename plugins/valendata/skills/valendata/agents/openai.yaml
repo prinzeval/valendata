@@ -1,0 +1,7 @@
+interface:
+  display_name: "Valendata"
+  short_description: "Website data as rows, through your Valendata skills"
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/logo.png"
+  brand_color: "#059669"
+  default_prompt: "Use $valendata to find a skill that lists 20 laptops on eBay under $500, then run it."

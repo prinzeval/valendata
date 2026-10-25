@@ -1,0 +1,19 @@
+{
+  "name": "valendata",
+  "owner": {
+    "name": "Valendata",
+    "email": "info@valendata.com"
+  },
+  "metadata": {
+    "description": "The Valendata plugin: the Valendata MCP server and the Valendata skill.",
+    "version": "0.3.0"
+  },
+  "plugins": [
+    {
+      "name": "valendata",
+      "description": "Valendata for AI coding agents: the Valendata MCP server (sign in through the browser) and a skill that teaches the agent to find, clone, run, create and schedule Valendata skills and workflows.",
+      "version": "0.3.0",
+      "source": "plugins/valendata"
+    }
+  ]
+}
