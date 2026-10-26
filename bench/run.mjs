@@ -14,10 +14,11 @@ import { parseArgs } from "node:util";
 
 import { loadKeys, readiness } from "./lib/keys.mjs";
 import { fillRate, fingerprint, rowsOf } from "./lib/rows.mjs";
+import { correctShare, fetchPage, pageText } from "./lib/truth.mjs";
 import { runApify } from "./tools/apify.mjs";
 import { runBrowserUse } from "./tools/browser_use.mjs";
 import { runFirecrawl } from "./tools/firecrawl.mjs";
-import { runValendata } from "./tools/valendata.mjs";
+import { requireValidated, runValendata } from "./tools/valendata.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const TOOLS = { valendata: runValendata, firecrawl: runFirecrawl, apify: runApify, browser_use: runBrowserUse };
@@ -64,8 +65,9 @@ export function inTaskFields(rows, fieldsMap) {
   return rows.map((row) => Object.fromEntries(Object.entries(fieldsMap).map(([mine, theirs]) => [mine, row[theirs]])));
 }
 
-export function resultLine({ task, tool, attempt, config }, outcome, at) {
+export function resultLine({ task, tool, attempt, config }, outcome, at, page = null) {
   const rows = inTaskFields(rowsOf(outcome.output), config?.fields_map);
+  const correct = task.truth && page !== null ? Math.round(correctShare(rows, task.truth.field, pageText(page)) * 100) / 100 : null;
   return {
     at, task: task.id, tool, attempt,
     ok: Boolean(outcome.ok) && rows.length > 0,
@@ -73,9 +75,11 @@ export function resultLine({ task, tool, attempt, config }, outcome, at) {
     seconds: Math.round(outcome.seconds * 100) / 100,
     usd: Math.round((outcome.usd || 0) * 10000) / 10000,
     usd_is_estimate: Boolean(outcome.usd_is_estimate),
-    tokens: outcome.tokens || 0,
+    tokens: outcome.tokens ?? null,
+    ai_used: outcome.ai_used ?? (outcome.tokens ? true : null),
     rows: rows.length,
     fill: Math.round(fillRate(rows, task.fields) * 100) / 100,
+    correct,
     answer: fingerprint(rows, task.fields),
     spent: outcome.spent || {},
     ref: outcome.ref || null,
@@ -93,9 +97,11 @@ async function main(argv) {
       runs: { type: "string", default: "5" },
       yes: { type: "boolean", default: false },
       out: { type: "string", default: "" },
+      "allow-draft": { type: "boolean", default: false },
+      tasks: { type: "string", default: "" },
     },
   });
-  const { tasks } = JSON.parse(await readFile(join(HERE, "tasks.json"), "utf8"));
+  const { tasks } = JSON.parse(await readFile(values.tasks || join(HERE, "tasks.json"), "utf8"));
   const pricing = JSON.parse(await readFile(join(HERE, "pricing.json"), "utf8"));
   const keys = await loadKeys();
   const ready = readiness(keys);
@@ -117,6 +123,12 @@ async function main(argv) {
     return;
   }
 
+  for (const { config } of planned.filter((p) => p.tool === "valendata" && p.attempt === 1)) {
+    if (!values["allow-draft"]) await requireValidated(keys.valendata, config.slug).catch((error) => {
+      console.error(`Stopped before spending: ${error.message}`);
+      process.exit(1);
+    });
+  }
   const day = new Date().toISOString().slice(0, 10);
   const out = values.out || join(HERE, "results", `${day}.jsonl`);
   for (const item of planned) {
@@ -127,10 +139,12 @@ async function main(argv) {
     } catch (error) {
       outcome = { ok: false, status: "error", seconds: 0, output: [], error: String(error.message || error) };
     }
-    const line = resultLine(item, outcome, at);
+    // The truth is read the moment the run ends, so every tool is checked against the page it saw.
+    const page = item.task.truth ? await fetchPage(item.task.url).catch(() => null) : null;
+    const line = resultLine(item, outcome, at, page);
     await appendFile(out, JSON.stringify(line) + "\n");
     console.log(`${line.ok ? "ok  " : "FAIL"} ${line.task} × ${line.tool} #${line.attempt}: ${line.seconds}s, ` +
-      `${line.rows} rows, fill ${line.fill}, $${line.usd}${line.error ? `, ${line.error}` : ""}`);
+      `${line.rows} rows, fill ${line.fill}${line.correct === null ? "" : `, correct ${line.correct}`}, $${line.usd}${line.error ? `, ${line.error}` : ""}`);
   }
   console.log(`\nSaved to ${out}. Summarise with: node bench/report.mjs ${out}`);
 }

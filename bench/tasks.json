@@ -25,6 +25,10 @@
         },
         "firecrawl": {},
         "browser_use": {}
+      },
+      "truth": {
+        "field": "headline",
+        "how": "the headline text appears on the page fetched when the run ends"
       }
     },
     {

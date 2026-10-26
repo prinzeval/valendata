@@ -15,6 +15,13 @@ export function median(numbers) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+/** The 95th percentile (nearest rank): the slow end people actually wait for. */
+export function p95(numbers) {
+  if (!numbers.length) return null;
+  const sorted = [...numbers].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.ceil(0.95 * sorted.length) - 1)];
+}
+
 export function summarise(lines) {
   const groups = new Map();
   for (const line of lines) {
@@ -33,9 +40,12 @@ export function summarise(lines) {
       median_seconds: median(worked.map((r) => r.seconds)),
       median_usd: median(runs.map((r) => r.usd)),
       usd_is_estimate: runs.some((r) => r.usd_is_estimate),
-      median_tokens: median(runs.map((r) => r.tokens)),
+      median_tokens: median(runs.map((r) => r.tokens).filter((t) => t !== null && t !== undefined)),
+      ai_read: runs.some((r) => r.ai_used === true),
       median_rows: median(worked.map((r) => r.rows)),
       median_fill: median(worked.map((r) => r.fill)),
+      median_correct: median(worked.map((r) => r.correct).filter((c) => c !== null && c !== undefined)),
+      p95_seconds: p95(worked.map((r) => r.seconds)),
       same_answer_every_run: worked.length > 1 ? answers.size === 1 : null,
       distinct_answers: answers.size,
     };
@@ -43,16 +53,18 @@ export function summarise(lines) {
 }
 
 export function markdown(rows) {
-  const head = "| Task | Tool | Worked | Time (median) | Cost per run | AI tokens | Rows | Fields filled | Same answer every run |\n" +
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |";
+  const head = "| Task | Tool | Worked | Time (median) | Time (P95) | Cost per run | AI tokens | Rows | Fields filled | Correct on the page | Same answer every run |\n" +
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |";
   const fmt = (v, f) => (v === null || v === undefined ? "—" : f(v));
   const body = rows.map((r) => [
     r.task, r.tool, `${r.worked}/${r.runs}`,
     fmt(r.median_seconds, (v) => `${v.toFixed(1)} s`),
+    fmt(r.p95_seconds, (v) => `${v.toFixed(1)} s`),
     fmt(r.median_usd, (v) => `$${v.toFixed(4)}${r.usd_is_estimate ? " (est.)" : ""}`),
-    fmt(r.median_tokens, (v) => Math.round(v).toLocaleString("en-US")),
+    r.median_tokens !== null ? Math.round(r.median_tokens).toLocaleString("en-US") : r.ai_read ? "not reported (AI read the page)" : "—",
     fmt(r.median_rows, String),
     fmt(r.median_fill, (v) => `${Math.round(v * 100)}%`),
+    fmt(r.median_correct, (v) => `${Math.round(v * 100)}%`),
     r.same_answer_every_run === null ? "—" : r.same_answer_every_run ? "yes" : `no (${r.distinct_answers} different)`,
   ].join(" | ")).map((line) => `| ${line} |`);
   return [head, ...body].join("\n");

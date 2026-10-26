@@ -35,7 +35,9 @@ export async function runFirecrawl({ task, keys, pricing, fetchImpl = fetch, now
     usd: pricing.firecrawl.estimate_usd_per_run,
     usd_is_estimate: true,
     spent: { firecrawl_credits: credits },
-    tokens: 0,
+    // JSON extraction is an AI read of the page; Firecrawl's answer has no token count.
+    tokens: null,
+    ai_used: true,
     ref: meta.scrapeId || null,
     error: null,
   };

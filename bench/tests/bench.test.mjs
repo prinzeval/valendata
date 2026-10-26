@@ -114,3 +114,29 @@ test("a tool's own field names are scored as the task's, and tools take turns ru
   const { planned } = planRuns([task], { taskIds: [], toolIds: ["valendata", "browser_use"], runs: 2 }, ready);
   assert.deepEqual(planned.map((p) => `${p.tool}#${p.attempt}`), ["valendata#1", "browser_use#1", "valendata#2", "browser_use#2"]);
 });
+
+test("Valendata's AI use is reported as it was, never as a made-up zero", async () => {
+  const { usedAi } = await import("../tools/valendata.mjs");
+  assert.equal(usedAi({ scrape_mode_used: "deep" }), true);
+  assert.equal(usedAi({ diagnosis: { per_field: { a: { where_tried: ["an AI read of the page"] } } } }), true);
+  assert.equal(usedAi({ scrape_mode_used: "fast", diagnosis: {} }), false);
+  const line = resultLine({ task, tool: "valendata", attempt: 1 }, { ok: true, seconds: 30, usd: 0.02, output: [{ headline: "A", link: "u" }], tokens: null, ai_used: true }, "t");
+  assert.equal(line.tokens, null);
+  assert.match(markdown(summarise([line])), /not reported \(AI read the page\)/);
+});
+
+test("a skill that never passed its own validation is refused before anything is spent", async () => {
+  const { requireValidated } = await import("../tools/valendata.mjs");
+  const fetchImpl = async () => new Response(JSON.stringify({ validation_status: "failed", validation_reason: "twin fields" }));
+  await assert.rejects(requireValidated({ apiKey: "k", apiUrl: "https://api.test" }, "wiki", fetchImpl), /has not passed its own validation/);
+});
+
+test("a row counts as correct only when its text is really on the page", async () => {
+  const { correctShare, pageText } = await import("../lib/truth.mjs");
+  const page = pageText('<ul><li><a href="/g">Gaza genocide</a> – Israel launches an airstrike against a tent in <a>Khan Yunis</a>, Gaza Strip.</li></ul>');
+  const real = { headline: "Israel launches an airstrike against a tent in Khan Yunis, Gaza Strip." };
+  const madeUp = { headline: "Israel announces a ceasefire across the whole Gaza Strip today." };
+  const category = { headline: "Armed conflicts and attacks" };
+  assert.equal(correctShare([real], "headline", page), 1);
+  assert.equal(correctShare([real, madeUp, category], "headline", page), 1 / 3);
+});

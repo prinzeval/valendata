@@ -4,6 +4,21 @@
 import { request } from "../../cli/src/http.mjs";
 import { pollUntilDone } from "../../cli/src/poll.mjs";
 
+/** Whether the run read the page with AI: a deep scrape, a repair, or a diagnosis that says so. */
+export function usedAi(state) {
+  if (state.scrape_mode_used === "deep" || state.heal_kind) return true;
+  return JSON.stringify(state.diagnosis || {}).includes("an AI read");
+}
+
+/** Refuse to benchmark a skill that never passed its own validation (a draft would misrepresent us). */
+export async function requireValidated(settings, slug, fetchImpl = fetch) {
+  const skill = await request(settings, "GET", `/v1/skills/${encodeURIComponent(slug)}`, { fetchImpl });
+  if (skill.validation_status !== "passed") {
+    throw new Error(`${slug} has not passed its own validation (${skill.validation_status || "unknown"}: ` +
+      `${String(skill.validation_reason || "").slice(0, 120)}). Fix or rebuild it before benchmarking.`);
+  }
+}
+
 export async function runValendata({ task, config, keys, pricing, fetchImpl = fetch, sleep, now = Date.now }) {
   const settings = keys.valendata;
   const started = now();
@@ -21,8 +36,10 @@ export async function runValendata({ task, config, keys, pricing, fetchImpl = fe
     output: (state.rows || []).slice(0, task.limit),
     usd: credits * pricing.valendata.usd_per_credit,
     spent: { credits },
-    // Replays use no AI; tokens are only spent when a run repairs itself.
-    tokens: Number(state.tokens ?? state.ai_tokens ?? 0),
+    // The run answer has no token count. Say whether AI read the page (a "deep" read, a repair)
+    // instead of claiming 0: null tokens = not reported, never a made-up zero.
+    tokens: state.tokens ?? state.ai_tokens ?? null,
+    ai_used: usedAi(state),
     ref: run.run_id,
     error: state.error || state.needs_user?.message || null,
   };
