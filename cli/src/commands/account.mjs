@@ -15,7 +15,18 @@ export async function login(ctx) {
   const settings = { ...ctx.settings, apiKey: key };
   const account = await request(settings, "GET", "/v1/account", { fetchImpl: ctx.fetch });
   const path = await saveApiKey(key, ctx.env);
-  ctx.err(`Signed in. ${account.credits ?? "?"} credits on the ${account.plan ?? "free"} plan. Key saved to ${path}\n`);
+  ctx.err(`Signed in. ${creditsOf(account)} credits on the ${planOf(account)} plan. Key saved to ${path}\n`);
+}
+
+// /v1/account answers credits and plan as objects ({balance}, {name}); older answers were plain values.
+function creditsOf(account) {
+  const credits = account.credits;
+  return (credits && typeof credits === "object" ? credits.balance : credits) ?? "?";
+}
+
+function planOf(account) {
+  const plan = account.plan;
+  return (plan && typeof plan === "object" ? plan.name : plan) ?? "free";
 }
 
 /** valendata whoami — credits and plan. */

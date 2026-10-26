@@ -28,13 +28,16 @@ export function planRuns(tasks, { taskIds, toolIds, runs }, ready) {
   const skipped = [];
   for (const task of tasks) {
     if (taskIds.length && !taskIds.includes(task.id)) continue;
+    const runnable = [];
     for (const tool of toolIds) {
       const config = task.tools[tool];
       if (!config) skipped.push({ task: task.id, tool, why: "no entry for this tool" });
       else if (tool === "valendata" && !config.slug) skipped.push({ task: task.id, tool, why: config.note });
       else if (ready[tool] !== "ready") skipped.push({ task: task.id, tool, why: ready[tool] });
-      else for (let i = 1; i <= runs; i += 1) planned.push({ task, tool, config, attempt: i });
+      else runnable.push({ tool, config });
     }
+    // Tools take turns, run by run, so each meets the site and the network at the same moments.
+    for (let i = 1; i <= runs; i += 1) for (const { tool, config } of runnable) planned.push({ task, tool, config, attempt: i });
   }
   return { planned, skipped };
 }
@@ -55,8 +58,14 @@ export function estimate(planned, pricing) {
 }
 
 /** One result line: what the tool said, measured the same way for every tool. */
-export function resultLine({ task, tool, attempt }, outcome, at) {
-  const rows = rowsOf(outcome.output);
+/** A tool's rows with its own field names turned into the task's (config.fields_map: task field → tool field). */
+export function inTaskFields(rows, fieldsMap) {
+  if (!fieldsMap) return rows;
+  return rows.map((row) => Object.fromEntries(Object.entries(fieldsMap).map(([mine, theirs]) => [mine, row[theirs]])));
+}
+
+export function resultLine({ task, tool, attempt, config }, outcome, at) {
+  const rows = inTaskFields(rowsOf(outcome.output), config?.fields_map);
   return {
     at, task: task.id, tool, attempt,
     ok: Boolean(outcome.ok) && rows.length > 0,

@@ -94,3 +94,12 @@ test("a refused key says how to fix it", async () => {
 test("rows print as CSV with quoting", () => {
   assert.equal(toCsv([{ a: 'x,"y"', b: 1 }, { a: "z" }]), 'a,b\n"x,""y""",1\nz,');
 });
+
+test("login says the balance and plan in words, whatever shape the account answer has", async () => {
+  const { login } = await import("../src/commands/account.mjs");
+  const said = [];
+  const fetch = async () => new Response(JSON.stringify({ credits: { balance: "17153.94" }, plan: { name: "free" } }));
+  const env = { XDG_CONFIG_HOME: (await import("node:fs")).mkdtempSync((await import("node:os")).tmpdir() + "/vd-") };
+  await login({ args: { flags: { key: "vd_sk_test" } }, settings: { apiUrl: "https://api.test" }, fetch, env, err: (s) => said.push(s) });
+  assert.match(said[0], /Signed in\. 17153\.94 credits on the free plan\./);
+});

@@ -106,3 +106,11 @@ test("browser-use is priced from its own tokens once the prices are filled in", 
   assert.equal(usdFromTokens(run, { input: null, cached_input: null, output: null }), null);
   assert.equal(usdFromTokens(run, { input: 0.3, cached_input: 0.03, output: 1.2 }), 0.3 + 0.06 + 0.12);
 });
+
+test("a tool's own field names are scored as the task's, and tools take turns run by run", async () => {
+  const { inTaskFields } = await import("../run.mjs");
+  const rows = inTaskFields([{ event_text: "A", article_url: "u", topic: "x" }], { headline: "event_text", link: "article_url" });
+  assert.deepEqual(rows, [{ headline: "A", link: "u" }]);
+  const { planned } = planRuns([task], { taskIds: [], toolIds: ["valendata", "browser_use"], runs: 2 }, ready);
+  assert.deepEqual(planned.map((p) => `${p.tool}#${p.attempt}`), ["valendata#1", "browser_use#1", "valendata#2", "browser_use#2"]);
+});
