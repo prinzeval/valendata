@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+// Turn result lines into the table people check: per task and tool, the median time and cost,
+// tokens, rows, how full the rows are, how many runs worked, and whether every working run gave
+// the same answer. Writes <results>.summary.json (the videos read it) and prints Markdown.
+//
+//   node bench/report.mjs bench/results/2026-10-26.jsonl
+
+import { readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+
+export function median(numbers) {
+  if (!numbers.length) return null;
+  const sorted = [...numbers].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+export function summarise(lines) {
+  const groups = new Map();
+  for (const line of lines) {
+    const key = `${line.task}|${line.tool}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(line);
+  }
+  return [...groups.values()].map((runs) => {
+    const worked = runs.filter((r) => r.ok);
+    const answers = new Set(worked.map((r) => r.answer));
+    return {
+      task: runs[0].task,
+      tool: runs[0].tool,
+      runs: runs.length,
+      worked: worked.length,
+      median_seconds: median(worked.map((r) => r.seconds)),
+      median_usd: median(runs.map((r) => r.usd)),
+      usd_is_estimate: runs.some((r) => r.usd_is_estimate),
+      median_tokens: median(runs.map((r) => r.tokens)),
+      median_rows: median(worked.map((r) => r.rows)),
+      median_fill: median(worked.map((r) => r.fill)),
+      same_answer_every_run: worked.length > 1 ? answers.size === 1 : null,
+      distinct_answers: answers.size,
+    };
+  });
+}
+
+export function markdown(rows) {
+  const head = "| Task | Tool | Worked | Time (median) | Cost per run | AI tokens | Rows | Fields filled | Same answer every run |\n" +
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |";
+  const fmt = (v, f) => (v === null || v === undefined ? "—" : f(v));
+  const body = rows.map((r) => [
+    r.task, r.tool, `${r.worked}/${r.runs}`,
+    fmt(r.median_seconds, (v) => `${v.toFixed(1)} s`),
+    fmt(r.median_usd, (v) => `$${v.toFixed(4)}${r.usd_is_estimate ? " (est.)" : ""}`),
+    fmt(r.median_tokens, (v) => Math.round(v).toLocaleString("en-US")),
+    fmt(r.median_rows, String),
+    fmt(r.median_fill, (v) => `${Math.round(v * 100)}%`),
+    r.same_answer_every_run === null ? "—" : r.same_answer_every_run ? "yes" : `no (${r.distinct_answers} different)`,
+  ].join(" | ")).map((line) => `| ${line} |`);
+  return [head, ...body].join("\n");
+}
+
+async function main(path) {
+  if (!path) throw new Error("Give the results file: node bench/report.mjs bench/results/<date>.jsonl");
+  const lines = (await readFile(path, "utf8")).split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  const rows = summarise(lines);
+  await writeFile(path.replace(/\.jsonl$/, ".summary.json"), JSON.stringify(rows, null, 2) + "\n");
+  console.log(markdown(rows));
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main(process.argv[2]).catch((error) => {
+    console.error(error.message || error);
+    process.exit(1);
+  });
+}

@@ -1,0 +1,77 @@
+{
+  "about": "The five everyday jobs every tool is asked to do, in the same words. A tool with no entry for a task is skipped and the report says so. Valendata inputs marked verify are checked against the skill (valendata info <slug>) before the first paid run.",
+  "tasks": [
+    {
+      "id": "wikipedia",
+      "title": "Wikipedia current events (latest 5)",
+      "prompt": "Go to https://en.wikipedia.org/wiki/Portal:Current_events and return the 5 most recent news items as JSON objects with: date, headline, link.",
+      "url": "https://en.wikipedia.org/wiki/Portal:Current_events",
+      "fields": ["date", "headline", "link"],
+      "limit": 5,
+      "browser": false,
+      "tools": {
+        "valendata": { "slug": "wikipedia-current-events", "inputs": {} },
+        "firecrawl": {},
+        "browser_use": {}
+      }
+    },
+    {
+      "id": "walmart",
+      "title": "Walmart search \"air fryer\", top 10",
+      "prompt": "Search Walmart (https://www.walmart.com) for \"air fryer\" and return the top 10 products as JSON objects with: name, price, rating, link.",
+      "url": "https://www.walmart.com/search?q=air+fryer",
+      "fields": ["name", "price", "rating", "link"],
+      "limit": 10,
+      "browser": false,
+      "tools": {
+        "valendata": { "slug": null, "note": "No Walmart skill in the marketplace yet: create one first (valendata or the app), then put its slug here." },
+        "firecrawl": {},
+        "browser_use": {}
+      }
+    },
+    {
+      "id": "instagram",
+      "title": "Instagram profile @nasa",
+      "prompt": "Open the Instagram profile https://www.instagram.com/nasa/ and return JSON with: followers, bio, and the latest 12 posts (link, caption, likes).",
+      "url": "https://www.instagram.com/nasa/",
+      "fields": ["link", "caption", "likes"],
+      "limit": 12,
+      "browser": false,
+      "tools": {
+        "valendata": { "slug": null, "note": "The marketplace Instagram skill has failed every run: build a fresh one first." },
+        "firecrawl": {},
+        "apify": { "actor": "apify~instagram-profile-scraper", "input": { "usernames": ["nasa"] } },
+        "browser_use": {}
+      }
+    },
+    {
+      "id": "maps",
+      "title": "Google Maps \"dentists in Austin\", top 10",
+      "prompt": "On Google Maps, search \"dentists in Austin, TX\" and return the top 10 results as JSON objects with: name, phone, website, rating.",
+      "url": "https://www.google.com/maps/search/dentists+in+Austin+TX",
+      "fields": ["name", "phone", "website", "rating"],
+      "limit": 10,
+      "browser": true,
+      "tools": {
+        "valendata": { "slug": "google-maps-places-search", "inputs": { "query": "dentists in Austin, TX" }, "verify": true },
+        "firecrawl": {},
+        "apify": { "actor": "compass~crawler-google-places", "input": { "searchStringsArray": ["dentists in Austin, TX"], "maxCrawledPlacesPerSearch": 10, "language": "en" } },
+        "browser_use": {}
+      }
+    },
+    {
+      "id": "zillow",
+      "title": "Zillow homes for sale in Austin, top 10",
+      "prompt": "On Zillow, find homes for sale in Austin, TX and return the first 10 as JSON objects with: address, price, beds, link.",
+      "url": "https://www.zillow.com/austin-tx/",
+      "fields": ["address", "price", "beds", "link"],
+      "limit": 10,
+      "browser": true,
+      "tools": {
+        "valendata": { "slug": "zillow-homes-for-sale", "inputs": { "location": "Austin, TX" }, "verify": true },
+        "firecrawl": {},
+        "browser_use": {}
+      }
+    }
+  ]
+}

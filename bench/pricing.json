@@ -1,0 +1,12 @@
+{
+  "about": "How each tool's spend becomes dollars, and the estimate shown BEFORE a paid run. Measured costs always win over these: a run records what the tool itself reported. Check each provider's price page before publishing.",
+  "valendata": { "usd_per_credit": 0.01, "estimate_credits_per_run": 4, "source": "Valendata top-ups: $1 per 100 credits" },
+  "firecrawl": { "estimate_usd_per_run": 0.05, "source": "Extract is billed per token; the report uses the credits Firecrawl returns when it returns them" },
+  "apify": { "estimate_usd_per_run": 0.05, "source": "Apify reports each run's own usageTotalUsd, which the report uses" },
+  "browser_use": {
+    "model": "deepseek-flash",
+    "estimate_usd_per_run": 0.03,
+    "usd_per_million_tokens": { "input": null, "cached_input": null, "output": null },
+    "source": "Exact tokens are recorded per run. Fill these three prices from DeepSeek's pricing page (api-docs.deepseek.com) and every run is priced from its own tokens; until then the report marks the cost as an estimate."
+  }
+}
