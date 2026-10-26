@@ -9,6 +9,19 @@ or run them again.
 replay that uses no AI tokens (AI only steps in to repair a skill when the site changes). An AI
 agent thinks through every click on every run.
 
+## Results so far
+
+| Round | When | Valendata | Firecrawl | browser-use | What it showed |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Oct 26 | 0/5 | 5/5, 15.8 s | 5/5, 121.7 s | Valendata's cloud browser was paused (its proxy plan had lapsed); every run refused, nothing charged. |
+| 2 | Oct 26 | 5/5, 31.8 s, 80% filled | 5/5, 11.6 s | 5/5, 120.8 s | The skill used had never passed its own test: a blank row, a category where the event text should be. That led to the engine fixes below. |
+| 3 | Oct 26 | 5/5, 3.6 s, 100% correct | 5/5, 7.3 s, 40% | 5/5, 121.9 s, 40% | Rebuilt skill: learned from its recording, it runs with one page download, no browser, no AI. |
+| 4 | Oct 27 | 5/5, 2.8 s, 100% correct | 5/5, 6.6 s, 20% | 4/5, 74.7 s, 60% | Same as round 3. |
+
+"Correct" = the row's text is really on the page fetched when the run ended (AI tools rewrite sentences, which this catches). Not claimed yet: "same answer every run". Wikipedia sometimes served Valendata a slightly older cached copy of the page, so its answers differed between runs even though each matched the page it got. Answers are compared only between runs that met the same page text.
+
+Token counts: neither Valendata's nor Firecrawl's answers carry one, so they show as "not reported", never 0 (rounds 1–2 were corrected from the run records on Oct 26).
+
 ## What is measured, per run
 
 | | |

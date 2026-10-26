@@ -14,7 +14,7 @@ import { parseArgs } from "node:util";
 
 import { loadKeys, readiness } from "./lib/keys.mjs";
 import { fillRate, fingerprint, rowsOf } from "./lib/rows.mjs";
-import { correctShare, fetchPage, pageText } from "./lib/truth.mjs";
+import { correctShare, fetchPage, pageText, pageVersion } from "./lib/truth.mjs";
 import { runApify } from "./tools/apify.mjs";
 import { runBrowserUse } from "./tools/browser_use.mjs";
 import { runFirecrawl } from "./tools/firecrawl.mjs";
@@ -80,6 +80,7 @@ export function resultLine({ task, tool, attempt, config }, outcome, at, page = 
     rows: rows.length,
     fill: Math.round(fillRate(rows, task.fields) * 100) / 100,
     correct,
+    page_version: page ? pageVersion(page) : null,
     answer: fingerprint(rows, task.fields),
     spent: outcome.spent || {},
     ref: outcome.ref || null,

@@ -108,6 +108,22 @@ The same account works over plain HTTP with an API key (**Settings → API Keys*
 - **Apify-compatible:** point `apify-client` at `https://api.valendata.com/apify`. Popular actor IDs such as `compass/crawler-google-places` run the matching Valendata skill. See [examples/apify_client.py](examples/apify_client.py).
 - **Valendata REST API:** run any of your skills by its slug. See [examples/run_skill.sh](examples/run_skill.sh) and the [API reference](https://docs.valendata.com/api-reference/introduction).
 
+## Benchmark: the same task, three tools
+
+[![Valendata vs Firecrawl vs browser-use](bench/media/race-poster.png)](bench/media/valendata-race.mp4)
+
+Get the latest events from Wikipedia's Current events page. 10 runs per tool in production, tools taking turns (Oct 26–27, 2026):
+
+| | Valendata | Firecrawl | browser-use |
+| --- | --- | --- | --- |
+| Worked | 10/10 | 10/10 | 9/10 |
+| Time, median / P95 | **3.0 s / 6.3 s** | 6.7 s / 20.4 s | 81.7 s / 302.5 s |
+| Rows whose text is really on the page | **100%** | 30% | 40% |
+| AI per run | **none** | AI extraction | ~102K tokens |
+| Cost per run | **$0.01** | ≈$0.05 | ≈$0.03 |
+
+Every run is in [`bench/results`](bench/results), failures included, and anyone can rerun it with [`bench/`](bench) ([the video](bench/media/valendata-race.mp4)).
+
 ## How it compares
 
 | | Valendata | Scraping APIs (Firecrawl and others) | Actor marketplaces (Apify and others) | Browser agents |

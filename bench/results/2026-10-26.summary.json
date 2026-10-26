@@ -1,0 +1,44 @@
+[
+  {
+    "task": "wikipedia",
+    "tool": "valendata",
+    "runs": 5,
+    "worked": 0,
+    "median_seconds": null,
+    "median_usd": 0,
+    "usd_is_estimate": false,
+    "median_tokens": 0,
+    "median_rows": null,
+    "median_fill": null,
+    "same_answer_every_run": null,
+    "distinct_answers": 0
+  },
+  {
+    "task": "wikipedia",
+    "tool": "firecrawl",
+    "runs": 5,
+    "worked": 5,
+    "median_seconds": 15.79,
+    "median_usd": 0.05,
+    "usd_is_estimate": true,
+    "median_tokens": 0,
+    "median_rows": 5,
+    "median_fill": 1,
+    "same_answer_every_run": false,
+    "distinct_answers": 5
+  },
+  {
+    "task": "wikipedia",
+    "tool": "browser_use",
+    "runs": 5,
+    "worked": 5,
+    "median_seconds": 121.69,
+    "median_usd": 0.03,
+    "usd_is_estimate": true,
+    "median_tokens": 128078,
+    "median_rows": 5,
+    "median_fill": 1,
+    "same_answer_every_run": false,
+    "distinct_answers": 5
+  }
+]

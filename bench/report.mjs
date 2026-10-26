@@ -32,6 +32,15 @@ export function summarise(lines) {
   return [...groups.values()].map((runs) => {
     const worked = runs.filter((r) => r.ok);
     const answers = new Set(worked.map((r) => r.answer));
+    // "Same answer" is judged within each page version: a page that changed mid-race is not a tool's fault.
+    const byVersion = new Map();
+    for (const r of worked) {
+      const key = r.page_version || "unknown";
+      if (!byVersion.has(key)) byVersion.set(key, new Set());
+      byVersion.get(key).add(r.answer);
+    }
+    const comparable = [...byVersion.values()].filter((set) => set.size > 0);
+    const steadyPerVersion = worked.length > 1 ? comparable.every((set) => set.size === 1) : null;
     return {
       task: runs[0].task,
       tool: runs[0].tool,
@@ -46,7 +55,8 @@ export function summarise(lines) {
       median_fill: median(worked.map((r) => r.fill)),
       median_correct: median(worked.map((r) => r.correct).filter((c) => c !== null && c !== undefined)),
       p95_seconds: p95(worked.map((r) => r.seconds)),
-      same_answer_every_run: worked.length > 1 ? answers.size === 1 : null,
+      same_answer_every_run: steadyPerVersion,
+      page_versions: byVersion.size,
       distinct_answers: answers.size,
     };
   });

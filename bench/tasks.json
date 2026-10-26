@@ -15,7 +15,7 @@
       "browser": false,
       "tools": {
         "valendata": {
-          "slug": "wikipedia-current-events",
+          "slug": "wikipedia-current-events-v2",
           "inputs": {},
           "fields_map": {
             "date": "event_date",

@@ -140,3 +140,15 @@ test("a row counts as correct only when its text is really on the page", async (
   assert.equal(correctShare([real], "headline", page), 1);
   assert.equal(correctShare([real, madeUp, category], "headline", page), 1 / 3);
 });
+
+test("same answer is judged within one page version, so a page that changed is no tool's fault", async () => {
+  const { pageVersion } = await import("../lib/truth.mjs");
+  const before = pageVersion('<script>"wgCurRevisionId":42</script><li>A number of militants and several civilians are killed.</li>');
+  const after = pageVersion('<script>"wgCurRevisionId":42</script><li>Several civilians are killed.</li>');
+  assert.notEqual(before, after, "an edited sentence is a new page version even when the revision number stays");
+  const mk = (attempt, answer, version) => ({ task: "w", tool: "t", attempt, ok: true, seconds: 1, usd: 0, rows: 5, fill: 1, answer, page_version: version });
+  const [steady] = summarise([mk(1, "a", "rev:1"), mk(2, "b", "rev:2"), mk(3, "a", "rev:1")]);
+  assert.equal(steady.same_answer_every_run, true);
+  const [shaky] = summarise([mk(1, "a", "rev:1"), mk(2, "c", "rev:1")]);
+  assert.equal(shaky.same_answer_every_run, false);
+});
