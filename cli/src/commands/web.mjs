@@ -1,12 +1,8 @@
 import { request } from "../http.mjs";
-import { intFlag } from "../args.mjs";
+import { intFlag, need } from "../args.mjs";
 import { printJson } from "../output.mjs";
 import { pollUntilDone } from "../poll.mjs";
 
-const need = (value, what) => {
-  if (!value) throw new Error(`Missing ${what}. See \`valendata help\`.`);
-  return value;
-};
 const formatsOf = (flags, fallback) => String(flags.formats || fallback).split(",").map((f) => f.trim()).filter(Boolean);
 
 /** valendata scrape <url> [--formats markdown,links,html,screenshot,summary] — one page (POST /v2/scrape). */

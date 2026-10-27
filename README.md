@@ -28,6 +28,8 @@
 
 **Logins handled for you.** A skill that needs an account signs in with the login you saved in the Valendata app. Passwords never pass through the agent.
 
+**Your browser or ours.** Every run, schedule and new skill can run in Valendata's cloud browser or in your own Chrome with the Valendata extension, for sites that block cloud browsers. Left on auto, Valendata picks, and moves runs to your Chrome when the cloud browser is paused.
+
 ## Install
 
 ### Claude Code
@@ -95,6 +97,7 @@ Agents that can run commands (Claude Code, Codex, Cursor) do best with the CLI: 
 export VALENDATA_API_KEY="vd_sk_..."
 npx valendata search "google maps dentists"
 npx valendata run google-maps-places-scraper search_query=dentist "location=Austin, TX" --max 10
+npx valendata run google-maps-places-scraper search_query=dentist "location=Austin, TX" --browser extension   # in your own Chrome
 npx valendata scrape https://news.ycombinator.com
 ```
 
@@ -106,7 +109,7 @@ The same account works over plain HTTP with an API key (**Settings → API Keys*
 
 - **Firecrawl-compatible:** point the official Firecrawl SDK at `https://api.valendata.com`. See [examples/firecrawl.py](examples/firecrawl.py).
 - **Apify-compatible:** point `apify-client` at `https://api.valendata.com/apify`. Popular actor IDs such as `compass/crawler-google-places` run the matching Valendata skill. See [examples/apify_client.py](examples/apify_client.py).
-- **Valendata REST API:** run any of your skills by its slug. See [examples/run_skill.sh](examples/run_skill.sh) and the [API reference](https://docs.valendata.com/api-reference/introduction).
+- **Valendata REST API:** run any of your skills by its slug. Add `"browser_type": "extension"` (or `"cloud"`) to a run's body to pick the browser. See [examples/run_skill.sh](examples/run_skill.sh) and the [API reference](https://docs.valendata.com/api-reference/introduction).
 
 ## Benchmark: the same task, three tools
 

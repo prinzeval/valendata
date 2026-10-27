@@ -103,3 +103,148 @@ test("login says the balance and plan in words, whatever shape the account answe
   await login({ args: { flags: { key: "vd_sk_test" } }, settings: { apiUrl: "https://api.test" }, fetch, env, err: (s) => said.push(s) });
   assert.match(said[0], /Signed in\. 17153\.94 credits on the free plan\./);
 });
+
+// --browser: which browser a run, schedule, creation or saved setting uses.
+
+const RUN_DONE = { status: "success", count: 1, credits_charged: 0.5, rows: [{ title: "A", phone: "1" }],
+  browser_used: "extension", browser_note: "Ran on your Chrome (the cloud browser is paused)." };
+
+test("run --browser maps cloud to remote, sends extension as it is, and sends nothing for auto", async () => {
+  const routes = { "POST /v1/skills/maps/runs": [202, { run_id: "r", status: "queued" }], "GET /v1/runs/r": [200, RUN_DONE] };
+  for (const [word, sent] of [["cloud", "remote"], ["extension", "extension"], ["auto", undefined], ["CLOUD", "remote"]]) {
+    const { code, calls } = await runCli(["run", "maps", "q=x", "--browser", word], routes);
+    assert.equal(code, 0);
+    assert.equal(calls[0].body.browser_type, sent, word);
+    assert.deepEqual(calls[0].body.inputs, { q: "x" }, "browser_type is a run setting, not an input");
+  }
+  const { calls } = await runCli(["run", "maps"], routes);
+  assert.ok(!("browser_type" in calls[0].body), "no --browser, no browser_type");
+});
+
+test("a --browser that is not auto, cloud or extension is refused before anything runs", async () => {
+  for (const argv of [["run", "maps", "--browser", "chrome"], ["run", "maps", "--browser"], ["workflow", "w", "--browser=remote"],
+    ["schedule", "maps", "--every", "daily", "--browser", "none"], ["update", "maps", "--browser", "firefox"]]) {
+    const { code, err, calls } = await runCli(argv, {});
+    assert.equal(code, 1, argv.join(" "));
+    assert.match(err, /--browser needs auto, cloud or extension/);
+    assert.equal(calls.length, 0, "no request was sent");
+  }
+});
+
+test("run says where it ran, and --json carries browser_used with the rows", async () => {
+  const routes = { "POST /v1/skills/maps/runs": [202, { run_id: "r" }], "GET /v1/runs/r": [200, RUN_DONE] };
+  const plain = await runCli(["run", "maps"], routes);
+  assert.match(plain.err, /success: 1 rows, 0\.5 credits\. Ran on your Chrome \(the cloud browser is paused\)\./);
+  assert.deepEqual(JSON.parse(plain.out), RUN_DONE.rows, "the default output stays the rows");
+  const json = await runCli(["run", "maps", "--json", "--fields", "title"], routes);
+  assert.deepEqual(JSON.parse(json.out), {
+    run_id: "r", status: "success", count: 1, credits_charged: 0.5, browser_used: "extension",
+    browser_note: "Ran on your Chrome (the cloud browser is paused).", rows: [{ title: "A" }],
+  });
+});
+
+test("the two browser refusals say which --browser to try", async () => {
+  const paused = await runCli(["run", "maps", "--browser", "cloud"], {
+    "POST /v1/skills/maps/runs": [409, { detail: "The cloud browser is paused right now. … Nothing was charged.", code: "cloud_browser_paused", type: "conflict" }],
+  });
+  assert.equal(paused.code, 1);
+  assert.equal(paused.err, "Error: The cloud browser is paused — try --browser extension (needs Chrome with the Valendata extension open) or leave it on auto. Nothing was charged.\n");
+  const chrome = await runCli(["workflow", "w", "--browser", "extension"], {
+    "POST /v1/workflows/w/run": [409, { detail: "Your Chrome … is not connected.", code: "extension_not_connected", type: "conflict" }],
+  });
+  assert.equal(chrome.code, 1);
+  assert.equal(chrome.err.split("\n").at(-2), "Error: Your Chrome with the Valendata extension isn't connected — open Chrome with the extension and try again, or use --browser cloud.");
+  const other = await runCli(["run", "maps"], { "POST /v1/skills/maps/runs": [409, { detail: "busy", code: "idempotency_key_in_use" }] });
+  assert.match(other.err, /409: busy/, "other conflicts keep the server's words");
+});
+
+test("workflow --browser sends browser_type and prints where it ran", async () => {
+  const answer = { status: "success", outputs: { rows: [] }, browser_used: "cloud", browser_note: "Ran on the cloud browser." };
+  const { code, out, err, calls } = await runCli(["workflow", "leads", "city=Austin", "--browser", "cloud"], { "POST /v1/workflows/leads/run": [200, answer] });
+  assert.equal(code, 0);
+  assert.deepEqual(calls[0].body, { inputs: { city: "Austin" }, wait: true, browser_type: "remote" });
+  assert.equal(JSON.parse(out).browser_used, "cloud");
+  assert.match(err, /Ran on the cloud browser\./);
+  const auto = await runCli(["workflow", "leads", "--browser", "auto"], { "POST /v1/workflows/leads/run": [200, { status: "success" }] });
+  assert.deepEqual(auto.calls[0].body, { inputs: {}, wait: true });
+});
+
+test("schedule sends the cadence, inputs and browser; --workflow schedules a workflow", async () => {
+  const skill = await runCli(["schedule", "maps", "q=dentist", "--every", "daily 09:00", "--timezone", "Europe/London", "--max", "50", "--browser", "extension"], {
+    "POST /v1/skills/maps/schedules": [201, { id: "sklsch_1", browser_type: "extension" }],
+  });
+  assert.equal(skill.code, 0);
+  assert.deepEqual(skill.calls[0].body, { every: "daily 09:00", inputs: { q: "dentist" }, browser_type: "extension", timezone: "Europe/London", max_results: 50 });
+  assert.equal(JSON.parse(skill.out).browser_type, "extension");
+  const flow = await runCli(["schedule", "--workflow", "leads", "--cron", "0 9 * * 1-5", "--browser", "auto"], {
+    "POST /v1/workflows/leads/schedules": [201, { id: "wfsch_1", browser_type: null }],
+  });
+  assert.equal(flow.code, 0);
+  assert.deepEqual(flow.calls[0].body, { cron: "0 9 * * 1-5", inputs: {} });
+  const none = await runCli(["schedule", "maps"], {});
+  assert.equal(none.code, 1);
+  assert.match(none.err, /Missing how often: --every/);
+});
+
+test("schedule-update changes only what is given; --browser auto goes back to automatic", async () => {
+  const route = { "PATCH /v1/schedules/sklsch_1": [200, { id: "sklsch_1", browser_type: null }] };
+  const auto = await runCli(["schedule-update", "sklsch_1", "--browser", "auto"], route);
+  assert.equal(auto.code, 0);
+  assert.deepEqual(auto.calls[0].body, { browser_type: "auto" });
+  const cloud = await runCli(["schedule-update", "sklsch_1", "--browser", "cloud", "--every", "2h"], route);
+  assert.deepEqual(cloud.calls[0].body, { every: "2h", browser_type: "remote" });
+  const nothing = await runCli(["schedule-update", "sklsch_1"], route);
+  assert.equal(nothing.code, 1);
+  assert.match(nothing.err, /Nothing to change/);
+  assert.equal(nothing.calls.length, 0);
+});
+
+test("schedules lists each one's browser in the --browser words", async () => {
+  const { out, calls } = await runCli(["schedules", "--kind", "skill"], {
+    "GET /v1/schedules": [200, { schedules: [
+      { id: "sklsch_1", kind: "skill", skill_slug: "maps", every: "daily 09:00", timezone: "UTC", enabled: true, browser_type: "remote" },
+      { id: "wfsch_2", kind: "workflow", workflow_slug: "leads", cron: "0 9 * * 1", timezone: "UTC", enabled: true, browser_type: null },
+    ] }],
+  });
+  assert.equal(calls[0].url.searchParams.get("kind"), "skill");
+  assert.deepEqual(JSON.parse(out).map((s) => [s.slug, s.browser]), [["maps", "cloud"], ["leads", "auto"]]);
+});
+
+test("update saves a skill's or workflow's browser; auto is sent so the saved choice is cleared", async () => {
+  const skill = await runCli(["update", "maps", "--browser", "cloud"], { "PATCH /v1/skills/maps": [200, { slug: "maps" }] });
+  assert.equal(skill.code, 0);
+  assert.deepEqual(skill.calls[0].body, { browser_type: "remote" });
+  assert.deepEqual(JSON.parse(skill.out), { slug: "maps", kind: "skill", browser: "cloud" });
+  const flow = await runCli(["update", "--workflow", "leads", "--browser", "auto"], { "PATCH /v1/workflows/leads": [200, { slug: "leads" }] });
+  assert.deepEqual(flow.calls[0].body, { browser_type: "auto" });
+  const nothing = await runCli(["update", "maps"], {});
+  assert.equal(nothing.code, 1);
+  assert.match(nothing.err, /Nothing to change: give --browser/);
+});
+
+test("create sends browser (not browser_type), waits, and prints the new slug", async () => {
+  let reads = 0;
+  const routes = {
+    "POST /v1/skills": [202, { creation_id: "cr_1", status: "queued" }],
+    "GET /v1/skill-creations/cr_1": () => (reads++ === 0
+      ? [200, { status: "recording", progress: "Step 2: type the search" }]
+      : [200, { status: "ready", slug: "dentists-austin", name: "Dentists", browser: "extension", source: "browser", credits_charged: 12 }]),
+  };
+  const { code, out, err, calls } = await runCli(
+    ["create", "List", "dentists", "in", "Austin", "--url", "https://maps.example", "city=Austin", "--fields", "name,phone", "--browser", "extension"], routes);
+  assert.equal(code, 0);
+  assert.deepEqual(calls[0].body, {
+    task: "List dentists in Austin", start_url: "https://maps.example", browser: "extension",
+    inputs: { city: "Austin" }, output_fields: ["name", "phone"],
+  });
+  assert.ok(calls[0].init.headers["Idempotency-Key"]);
+  assert.match(err, /Step 2: type the search/);
+  assert.match(err, /valendata run dentists-austin/);
+  assert.equal(JSON.parse(out).slug, "dentists-austin");
+  const auto = await runCli(["create", "List", "x", "--url", "https://x.example", "--browser", "auto", "--no-wait"], routes);
+  assert.ok(!("browser" in auto.calls[0].body), "auto is the default: nothing sent");
+  assert.deepEqual(JSON.parse(auto.out), { creation_id: "cr_1", status: "queued" });
+  const noUrl = await runCli(["create", "List", "x"], routes);
+  assert.equal(noUrl.code, 1);
+  assert.match(noUrl.err, /Missing --url/);
+});

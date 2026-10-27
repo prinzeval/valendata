@@ -20,3 +20,11 @@ curl -s "$API/marketplace/search?q=google+maps+places&limit=3"
 #    curl -s -X POST "$API/skills/<your-copy-slug>/run" -H "$AUTH" \
 #      -H "Content-Type: application/json" -H "Idempotency-Key: $(date +%s)" \
 #      -d '{"search_query": "coffee", "location": "Lisbon", "max_results": 10}'
+
+# 4. Pick the browser: "extension" runs in your own Chrome with the Valendata extension (it must
+#    be open), for sites that block cloud browsers; "cloud" is Valendata's cloud browser; leave it
+#    out to let Valendata pick. A 409 cloud_browser_paused or extension_not_connected means
+#    nothing ran and nothing was charged: try the other one.
+#    curl -s -X POST "$API/skills/<your-copy-slug>/run" -H "$AUTH" \
+#      -H "Content-Type: application/json" -H "Idempotency-Key: $(date +%s)" \
+#      -d '{"search_query": "coffee", "location": "Lisbon", "max_results": 10, "browser_type": "extension"}'

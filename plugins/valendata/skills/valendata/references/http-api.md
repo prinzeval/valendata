@@ -96,6 +96,7 @@ Tips:
 
 - Start small: `max_results` 10-30 until the user asks for more. It goes up to 500; `0` returns the whole list.
 - Always send an `Idempotency-Key` (MCP: `idempotency_key`). A retry with the same key returns the first run and never charges twice.
+- `browser_type` in the body picks the browser for this run: see Pick the browser below.
 
 ## 5. Poll a background run
 
@@ -115,6 +116,34 @@ Poll about every 30 seconds while `status` is `queued` or `running`. Stop at `su
 - `triage_kind` on a failed run says why (for example `site_down`, `blocked`, `logged_out`). A run keeps the credits it used, whatever the outcome.
 - `needs_user`: the user must act (a login, a code, a human check). It has `kind`, `message`, and `action_url`. Show the message and link to the user, then run again after they act. Do not retry before that.
 - `diagnosis`: why rows came back short. Its hint can be passed to improve (step 7).
+- `browser_used` (`cloud`, `extension`, or `null` when no browser opened) and `browser_note`, one plain line on where it ran, such as "Ran on your Chrome (the cloud browser is paused)." A workflow run has them on each of its `steps`, `nested_browsers` on a step that runs another workflow (that workflow's steps, each with `inside`), and one `browser_summary` line for the whole run, such as "Browsers: 3 steps on your Chrome (2 moved: the cloud browser is paused)."
+
+## Pick the browser
+
+Runs, schedules and new skills can say where the browser opens. Leave it out unless there is a reason: Valendata uses the skill's or step's own browser, and the user's Chrome when the cloud browser is paused. When to pick one: [Which browser](../SKILL.md#which-browser).
+
+| Route | Field | Values |
+| --- | --- | --- |
+| `POST /v1/skills/{slug}/run`, `/runs` | `browser_type`, at the top level of the body (a run setting, not an input) | `remote` (or `cloud`), `extension`, `none`, `auto` |
+| `POST /v1/workflows/{slug}/run`, `/runs` | `browser_type` | `remote` (or `cloud`), `extension`, `auto` |
+| `POST /v1/skills/{slug}/schedules`, `POST /v1/workflows/{slug}/schedules`, `PATCH /v1/schedules/{id}` | `browser_type` | `remote` (or `cloud`), `extension`; `auto` or `null` is automatic again |
+| `PATCH /v1/skills/{slug}`: the browser a run uses when it does not pick one | `browser_type` | `remote` (or `cloud`), `extension`, `none`; `auto` clears it |
+| `PATCH /v1/workflows/{slug}`: every browser step at once | `browser_type` | `cloud`, `extension`; `auto` gives each step its own again |
+| `POST /v1/skills` (step 7) | `browser` | `auto` (default), `cloud`, `extension` |
+
+- `remote` (`cloud`) is the cloud browser. `extension` is the user's own Chrome with the Valendata extension, which must be open and connected. `none` runs a skill with no browser. `auto` lets Valendata pick.
+- A workflow's `cloud` or `extension` covers every browser step, nested workflows included. `auto` keeps each step's own browser, so a workflow with steps on both stays that way.
+- Schedule views (`GET /v1/schedules`) carry `browser_type`: `null` is automatic.
+- `GET /v1/account` has `cloud_browser`; its `state` is `paused` while the cloud browser is paused.
+
+```bash
+curl -s -X POST https://api.valendata.com/v1/skills/{slug}/runs \
+  -H "Authorization: Bearer $VALENDATA_API_KEY" -H "Content-Type: application/json" \
+  -H "Idempotency-Key: <unique-id>" \
+  -d '{"inputs": {"city": "Austin"}, "max_results": 20, "browser_type": "extension"}'
+```
+
+MCP: the same tools take `browser` with `auto`, `cloud` or `extension`.
 
 ## Errors
 
@@ -127,11 +156,13 @@ Every error has `detail`, `code`, `type`, and `request_id`.
 | `403` | `permission_denied` | `detail.error` is `clone_required`: clone the skill (`detail.clone_url`) and run the copy. Otherwise the key lacks a scope. Tell the user which one. |
 | `404` | `not_found` | Wrong slug or id, or not theirs to see. Search again. |
 | `409` | `conflict`, `idempotency_key_in_use` | Read `detail`. Wait for the first request, or use a new `Idempotency-Key` for a new run. |
+| `409` | `cloud_browser_paused` | The cloud browser is paused. Run again with `browser_type` `extension`, or leave it out. Nothing ran, nothing charged. |
+| `409` | `extension_not_connected` | The user's Chrome with the Valendata extension is not connected. Ask them to open it, or run again with `remote`. Nothing ran, nothing charged. |
 | `422` | `validation_error` | Fix the inputs. `detail.allowed_inputs` lists the valid ones. |
 | `429` | `rate_limited` / `rate_limit_error` | Wait `Retry-After` seconds and retry with the same `Idempotency-Key`, or start a background run, which queues. |
 | `500` | `internal_error` | Retry once. Quote `request_id` if it keeps failing. |
 
-Over MCP, a tool error has `error.code`: `insufficient_credits` and `spend_cap` mean the same as `402`; `capacity_full` means wait `retry_after_s`; `needs_user` and `run_failed` as above.
+Over MCP, a tool error has `error.code`: `insufficient_credits` and `spend_cap` mean the same as `402`; `capacity_full` means wait `retry_after_s`; `needs_user` and `run_failed` as above; the two browser refusals are `cloud_browser_paused` and `extension_not_connected`, and `next_step` says which `browser` to try.
 
 ## 7. No skill fits: create one
 
@@ -147,7 +178,7 @@ curl -s -X POST https://api.valendata.com/v1/skills \
 
 MCP tool: `create_skill(task, start_url, name?, inputs?, output_fields?)`.
 
-- A cloud browser does the task, learns the steps, and checks them. It takes a few minutes, needs at least 10 credits to start, and an API key needs the `skills:write` scope.
+- A cloud browser does the task, learns the steps, and checks them (`browser`: `extension` records in the user's Chrome instead, for a site that blocks cloud browsers). It takes a few minutes, needs at least 10 credits to start, and an API key needs the `skills:write` scope.
 - It answers `202` with `creation_id`. Poll `GET /v1/skill-creations/{creation_id}` (MCP: `get_skill_creation`) about every 30 seconds while `status` is `queued`, `recording`, or `validating`. Pass on the `progress` line.
 - `ready`: run it with its `slug` (step 4).
 - `needs_fix`: a draft was saved. Fix it with `POST /v1/skills/{slug}/improve` and `{"feedback": "..."}` (MCP: `improve_skill`; an API key needs `skills:write`). Do not create it again.

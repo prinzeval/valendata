@@ -11,11 +11,21 @@ export class ApiError extends Error {
   }
 }
 
+// The two browser refusals (409), in words that say which --browser to try instead.
+const BROWSER_REFUSALS = {
+  cloud_browser_paused:
+    "The cloud browser is paused — try --browser extension (needs Chrome with the Valendata extension open) or leave it on auto.",
+  extension_not_connected:
+    "Your Chrome with the Valendata extension isn't connected — open Chrome with the extension and try again, or use --browser cloud.",
+};
+
 function messageOf(status, body) {
   const detail = body?.detail ?? body?.error ?? body;
   const text = typeof detail === "string" ? detail : detail?.message || detail?.error || JSON.stringify(detail);
   if (status === 401) return "Your API key was refused. Make one in Valendata under Settings → API Keys, then run `valendata login`.";
   if (status === 402) return `Not enough credits: ${text}`;
+  const refusal = BROWSER_REFUSALS[body?.code ?? detail?.code];
+  if (refusal) return /nothing was charged/i.test(text) ? `${refusal} Nothing was charged.` : refusal;
   return `${status}: ${text}`;
 }
 

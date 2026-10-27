@@ -9,7 +9,7 @@ Valendata turns a website task into a **skill**: a saved task that takes inputs 
 
 ## If you can run shell commands, use the CLI
 
-With `VALENDATA_API_KEY` set (or after `npx valendata login`), the `valendata` CLI does everything below in short commands with JSON output, and loads no tool list: `npx valendata search "<task>"`, `npx valendata clone <slug>`, `npx valendata info <slug>`, `npx valendata run <slug> key=value --max 20`, `npx valendata scrape <url>`. `npx valendata help` lists every command. Use the MCP tools when you cannot run commands (a chat app).
+With `VALENDATA_API_KEY` set (or after `npx valendata login`), the `valendata` CLI does everything below in short commands with JSON output, and loads no tool list: `npx valendata search "<task>"`, `npx valendata clone <slug>`, `npx valendata info <slug>`, `npx valendata run <slug> key=value --max 20`, `npx valendata scrape <url>`. Runs, schedules and new skills take `--browser auto|cloud|extension` (see Which browser below). `npx valendata help` lists every command. Use the MCP tools when you cannot run commands (a chat app).
 
 ## First, check the tools
 
@@ -30,6 +30,18 @@ The tools come from the MCP server named `valendata`: `search_skills`, `list_ski
 7. **Nothing fits.** Call `site_status(url_or_domain)` to see whether the site works on Valendata, then `create_skill(task, start_url)`. It takes a few minutes: poll `get_skill_creation` and pass on its progress line. On `needs_fix`, fix the draft with `talk_to_skill` or `improve_skill` (a repair spends credits like a run). Do not create it again.
 8. **Many inputs at once.** For a list (50 companies, 300 URLs), use `run_skill_batch` with one input set per row, then `get_batch`. Say the price first.
 9. **Keep it going.** For "every day" or "every week", use `schedule_skill` or `schedule_workflow`. Ask first: every scheduled run spends credits.
+
+## Which browser
+
+Runs, schedules and new skills can pick where the browser opens, with `browser`: `auto`, `cloud` or `extension`. `run_skill`, each `skill_<slug>`, `run_workflow`, each `workflow_<slug>`, `create_skill`, `schedule_skill`, `schedule_workflow` and `update_schedule` take it; `update_skill` and `update_workflow` save it for runs that do not pick one. Over HTTP it is `browser_type`: see [references/http-api.md](references/http-api.md).
+
+- **Leave it on `auto`** unless one of the cases below applies. Valendata uses the skill's or step's own browser, and moves the run to the user's Chrome when the cloud browser is paused.
+- **The cloud browser is paused** (a refusal says so, or `get_account` shows it): run again with `extension`.
+- **The user's Chrome is not connected** (a refusal says so): ask the user to open Chrome with the Valendata extension, or run again with `cloud`. Do not retry `extension` before they do.
+- **A site blocks cloud browsers** (runs fail as `blocked`, or stop at a human check every time): use `extension`, and save it with `update_skill` once it works.
+- **A workflow with steps on both browsers: leave `auto`.** It keeps each step's own browser. `cloud` or `extension` puts every browser step on that one, nested workflows included.
+
+A refused run started nothing and was not charged. A result's `browser_used` (`cloud` or `extension`) and `browser_note` say where it ran: pass the note on when the run moved to the user's Chrome.
 
 ## A page, a site or a search, without a skill
 
@@ -66,6 +78,7 @@ A tool error carries `error.code`:
 | `needs_user` | The user must act first. Show the message and link. |
 | `run_failed` | Read the reason and pass it on. A run keeps the credits it used, whatever the outcome. |
 | `invalid_arguments` | Fix the inputs from `get_skill`. |
+| `cloud_browser_paused` or `extension_not_connected` (409) | Nothing ran. Pick the other browser as Which browser says. |
 
 ## Without the MCP tools
 

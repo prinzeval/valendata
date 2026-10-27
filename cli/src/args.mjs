@@ -3,7 +3,7 @@
 // key=value words are the skill's inputs (what a coding agent writes most naturally); --flag value
 // and --flag=value are options; a bare --flag is true.
 
-const BOOLEAN_FLAGS = new Set(["json", "csv", "help", "no-wait", "full"]);
+const BOOLEAN_FLAGS = new Set(["json", "csv", "help", "no-wait", "full", "workflow"]);
 
 export function parseArgs(argv) {
   const [command = "help", ...words] = argv;
@@ -42,4 +42,10 @@ export function intFlag(flags, name) {
   const n = Number(flags[name]);
   if (!Number.isInteger(n) || n < 0) throw new Error(`--${name} needs a whole number, got "${flags[name]}"`);
   return n;
+}
+
+/** A required word (a slug, an id, a URL); missing is an error that points at the help. */
+export function need(value, what) {
+  if (!value) throw new Error(`Missing ${what}. See \`valendata help\`.`);
+  return value;
 }

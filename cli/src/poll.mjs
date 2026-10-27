@@ -4,12 +4,12 @@
 
 export const DONE = new Set(["success", "partial", "failed", "cancelled", "completed", "error"]);
 
-export async function pollUntilDone(read, { everyMs = 4000, maxMs = 15 * 60 * 1000, sleep, now = Date.now } = {}) {
+export async function pollUntilDone(read, { everyMs = 4000, maxMs = 15 * 60 * 1000, sleep, now = Date.now, done = DONE } = {}) {
   const wait = sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const started = now();
   for (;;) {
     const state = await read();
-    if (DONE.has(String(state?.status || "").toLowerCase())) return { state, done: true };
+    if (done.has(String(state?.status || "").toLowerCase())) return { state, done: true };
     if (now() - started >= maxMs) return { state, done: false };
     await wait(everyMs);
   }

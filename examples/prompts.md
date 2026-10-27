@@ -22,6 +22,7 @@ Paste these into Claude Code, Codex, Cursor or any agent with the Valendata MCP 
 - Make me a skill that lists new listings on this page: https://… with title, price and link.
 - That skill came back with an empty price column. Fix it.
 - Run that skill for these 50 cities: …
+- That site blocks cloud browsers. Run the skill in my own Chrome from now on.
 
 ## Workflows
 
