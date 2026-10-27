@@ -45,8 +45,9 @@ Schedules (every scheduled run spends credits):
   valendata schedule-update <id>         change one (only what you give)      [--every ...|--cron ...] [--timezone x]
                                                                               [--max 100] [--browser auto|cloud|extension]
 
---browser: auto (default) lets Valendata pick; cloud is the cloud browser; extension is your own Chrome
-with the Valendata extension (it must be open). Use extension for sites that block cloud browsers.
+--browser: auto (default) is the skill's own saved browser, else the cloud browser; cloud is the cloud
+browser; extension is your own Chrome with the Valendata extension (it must be open). Use extension for
+sites that block cloud browsers. Nothing ever switches browser by itself.
 
 Every run spends credits from your account. Output is JSON (rows as a list); --csv for rows.
 Example:

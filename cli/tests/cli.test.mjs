@@ -107,7 +107,7 @@ test("login says the balance and plan in words, whatever shape the account answe
 // --browser: which browser a run, schedule, creation or saved setting uses.
 
 const RUN_DONE = { status: "success", count: 1, credits_charged: 0.5, rows: [{ title: "A", phone: "1" }],
-  browser_used: "extension", browser_note: "Ran on your Chrome (the cloud browser is paused)." };
+  browser_used: "extension", browser_note: "Ran on your Chrome." };
 
 test("run --browser maps cloud to remote, sends extension as it is, and sends nothing for auto", async () => {
   const routes = { "POST /v1/skills/maps/runs": [202, { run_id: "r", status: "queued" }], "GET /v1/runs/r": [200, RUN_DONE] };
@@ -134,21 +134,38 @@ test("a --browser that is not auto, cloud or extension is refused before anythin
 test("run says where it ran, and --json carries browser_used with the rows", async () => {
   const routes = { "POST /v1/skills/maps/runs": [202, { run_id: "r" }], "GET /v1/runs/r": [200, RUN_DONE] };
   const plain = await runCli(["run", "maps"], routes);
-  assert.match(plain.err, /success: 1 rows, 0\.5 credits\. Ran on your Chrome \(the cloud browser is paused\)\./);
+  assert.match(plain.err, /success: 1 rows, 0\.5 credits\. Ran on your Chrome\./);
   assert.deepEqual(JSON.parse(plain.out), RUN_DONE.rows, "the default output stays the rows");
   const json = await runCli(["run", "maps", "--json", "--fields", "title"], routes);
   assert.deepEqual(JSON.parse(json.out), {
     run_id: "r", status: "success", count: 1, credits_charged: 0.5, browser_used: "extension",
-    browser_note: "Ran on your Chrome (the cloud browser is paused).", rows: [{ title: "A" }],
+    browser_note: "Ran on your Chrome.", rows: [{ title: "A" }],
   });
 });
 
-test("the two browser refusals say which --browser to try", async () => {
-  const paused = await runCli(["run", "maps", "--browser", "cloud"], {
-    "POST /v1/skills/maps/runs": [409, { detail: "The cloud browser is paused right now. … Nothing was charged.", code: "cloud_browser_paused", type: "conflict" }],
-  });
-  assert.equal(paused.code, 1);
-  assert.equal(paused.err, "Error: The cloud browser is paused — try --browser extension (needs Chrome with the Valendata extension open) or leave it on auto. Nothing was charged.\n");
+const PAUSED_DETAIL = "The cloud browser is unavailable right now: its proxy is rejecting our login. Nothing ran and nothing was charged.";
+const PAUSED_GUIDANCE = "The cloud browser is unavailable, so nothing ran and nothing was charged. To run it on your own Chrome instead "
+  + "(it uses your Chrome's sign-ins, which may be a different account), run the same command again with --browser extension.";
+
+test("a paused cloud browser prints the server's reason and the ask-first line, and never retries on Chrome", async () => {
+  const refused = [409, { detail: PAUSED_DETAIL, code: "cloud_browser_paused", type: "conflict" }];
+  for (const [argv, route] of [
+    [["run", "maps", "q=x"], "POST /v1/skills/maps/runs"],
+    [["run", "maps", "--browser", "cloud"], "POST /v1/skills/maps/runs"],
+    [["workflow", "w"], "POST /v1/workflows/w/run"],
+  ]) {
+    const { code, out, err, calls } = await runCli(argv, { [route]: refused });
+    assert.equal(code, 1, argv.join(" "));
+    assert.equal(out, "", "no rows");
+    assert.ok(err.endsWith(`Error: ${PAUSED_DETAIL}\n${PAUSED_GUIDANCE}\n`), err);
+    assert.equal(calls.length, 1, "one request: no retry on another browser");
+    assert.ok(calls.every((c) => c.body?.browser_type !== "extension" && c.body?.browser !== "extension"), "never switches to Chrome");
+  }
+  const bare = await runCli(["run", "maps"], { "POST /v1/skills/maps/runs": [409, { code: "cloud_browser_paused" }] });
+  assert.equal(bare.err, `Error: ${PAUSED_GUIDANCE}\n`, "without the server's words, the guidance alone");
+});
+
+test("a Chrome that isn't connected says what to do", async () => {
   const chrome = await runCli(["workflow", "w", "--browser", "extension"], {
     "POST /v1/workflows/w/run": [409, { detail: "Your Chrome … is not connected.", code: "extension_not_connected", type: "conflict" }],
   });

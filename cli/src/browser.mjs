@@ -1,7 +1,7 @@
 // --browser auto|cloud|extension: which browser a run, schedule or creation uses.
-//   auto       let Valendata pick (the skill's or step's own browser, and your Chrome when the
-//              cloud browser is paused); a run or creation sends nothing, an update sends "auto"
-//              so a saved choice goes back to automatic
+//   auto       the skill's or step's own saved browser, else the cloud browser (never a switch
+//              to your Chrome); a run or creation sends nothing, an update sends "auto" so a
+//              saved choice goes back to automatic
 //   cloud      the cloud browser ("remote" in browser_type bodies)
 //   extension  your own Chrome with the Valendata extension (it must be open and connected)
 

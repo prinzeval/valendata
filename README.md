@@ -28,7 +28,7 @@
 
 **Logins handled for you.** A skill that needs an account signs in with the login you saved in the Valendata app. Passwords never pass through the agent.
 
-**Your browser or ours.** Every run, schedule and new skill can run in Valendata's cloud browser or in your own Chrome with the Valendata extension, for sites that block cloud browsers. Left on auto, Valendata picks, and moves runs to your Chrome when the cloud browser is paused.
+**Your browser or ours.** Every run, schedule and new skill can run in Valendata's cloud browser or in your own Chrome with the Valendata extension, for sites that block cloud browsers. Left on auto, a run uses the skill's own browser, else the cloud browser, and never switches by itself: if the cloud browser is unavailable, the run stops, says why and charges nothing, and you choose whether to run it on your Chrome.
 
 ## Install
 

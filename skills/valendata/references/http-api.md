@@ -116,11 +116,11 @@ Poll about every 30 seconds while `status` is `queued` or `running`. Stop at `su
 - `triage_kind` on a failed run says why (for example `site_down`, `blocked`, `logged_out`). A run keeps the credits it used, whatever the outcome.
 - `needs_user`: the user must act (a login, a code, a human check). It has `kind`, `message`, and `action_url`. Show the message and link to the user, then run again after they act. Do not retry before that.
 - `diagnosis`: why rows came back short. Its hint can be passed to improve (step 7).
-- `browser_used` (`cloud`, `extension`, or `null` when no browser opened) and `browser_note`, one plain line on where it ran, such as "Ran on your Chrome (the cloud browser is paused)." A workflow run has them on each of its `steps`, `nested_browsers` on a step that runs another workflow (that workflow's steps, each with `inside`), and one `browser_summary` line for the whole run, such as "Browsers: 3 steps on your Chrome (2 moved: the cloud browser is paused)."
+- `browser_used` (`cloud`, `extension`, or `null` when no browser opened) and `browser_note`, one plain line on where it ran, such as "Ran on your Chrome." A workflow run has them on each of its `steps`, `nested_browsers` on a step that runs another workflow (that workflow's steps, each with `inside`), and one `browser_summary` line for the whole run, such as "Browsers: 2 steps on the cloud browser, 1 on your Chrome."
 
 ## Pick the browser
 
-Runs, schedules and new skills can say where the browser opens. Leave it out unless there is a reason: Valendata uses the skill's or step's own browser, and the user's Chrome when the cloud browser is paused. When to pick one: [Which browser](../SKILL.md#which-browser).
+Runs, schedules and new skills can say where the browser opens. Leave it out unless there is a reason: Valendata uses the skill's or step's own saved browser, else the cloud browser. It never moves a run between the cloud browser and the user's Chrome by itself. When to pick one: [Which browser](../SKILL.md#which-browser).
 
 | Route | Field | Values |
 | --- | --- | --- |
@@ -131,7 +131,7 @@ Runs, schedules and new skills can say where the browser opens. Leave it out unl
 | `PATCH /v1/workflows/{slug}`: every browser step at once | `browser_type` | `cloud`, `extension`; `auto` gives each step its own again |
 | `POST /v1/skills` (step 7) | `browser` | `auto` (default), `cloud`, `extension` |
 
-- `remote` (`cloud`) is the cloud browser. `extension` is the user's own Chrome with the Valendata extension, which must be open and connected. `none` runs a skill with no browser. `auto` lets Valendata pick.
+- `remote` (`cloud`) is the cloud browser. `extension` is the user's own Chrome with the Valendata extension, which must be open and connected. `none` runs a skill with no browser. `auto` is the skill's or step's own saved browser, else the cloud browser.
 - A workflow's `cloud` or `extension` covers every browser step, nested workflows included. `auto` keeps each step's own browser, so a workflow with steps on both stays that way.
 - Schedule views (`GET /v1/schedules`) carry `browser_type`: `null` is automatic.
 - `GET /v1/account` has `cloud_browser`; its `state` is `paused` while the cloud browser is paused.
@@ -156,13 +156,13 @@ Every error has `detail`, `code`, `type`, and `request_id`.
 | `403` | `permission_denied` | `detail.error` is `clone_required`: clone the skill (`detail.clone_url`) and run the copy. Otherwise the key lacks a scope. Tell the user which one. |
 | `404` | `not_found` | Wrong slug or id, or not theirs to see. Search again. |
 | `409` | `conflict`, `idempotency_key_in_use` | Read `detail`. Wait for the first request, or use a new `Idempotency-Key` for a new run. |
-| `409` | `cloud_browser_paused` | The cloud browser is paused. Run again with `browser_type` `extension`, or leave it out. Nothing ran, nothing charged. |
-| `409` | `extension_not_connected` | The user's Chrome with the Valendata extension is not connected. Ask them to open it, or run again with `remote`. Nothing ran, nothing charged. |
+| `409` | `cloud_browser_paused` | The cloud browser is unavailable; `detail` says why (for example, its proxy is rejecting our login). Nothing ran, nothing charged. Tell the user why and ask whether to run it on their own Chrome (it uses their Chrome's own sign-ins, which may be a different account). Only after they say yes, run again with `browser_type` `extension`. Never switch by yourself. |
+| `409` | `extension_not_connected` | The user's Chrome with the Valendata extension is not connected. Nothing ran, nothing charged. Ask them to open it, or whether to run it on the cloud browser (`remote`) instead. Do not retry before they answer. |
 | `422` | `validation_error` | Fix the inputs. `detail.allowed_inputs` lists the valid ones. |
 | `429` | `rate_limited` / `rate_limit_error` | Wait `Retry-After` seconds and retry with the same `Idempotency-Key`, or start a background run, which queues. |
 | `500` | `internal_error` | Retry once. Quote `request_id` if it keeps failing. |
 
-Over MCP, a tool error has `error.code`: `insufficient_credits` and `spend_cap` mean the same as `402`; `capacity_full` means wait `retry_after_s`; `needs_user` and `run_failed` as above; the two browser refusals are `cloud_browser_paused` and `extension_not_connected`, and `next_step` says which `browser` to try.
+Over MCP, a tool error has `error.code`: `insufficient_credits` and `spend_cap` mean the same as `402`; `capacity_full` means wait `retry_after_s`; `needs_user` and `run_failed` as above; the two browser refusals are `cloud_browser_paused` and `extension_not_connected`, and `next_step` says to ask the user before running it again on the other `browser`.
 
 ## 7. No skill fits: create one
 

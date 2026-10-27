@@ -40,13 +40,13 @@ npx valendata scrape https://news.ycombinator.com
 
 ## Which browser
 
-`--browser auto|cloud|extension` picks where the browser opens for `run`, `workflow`, `create`, `schedule`, `schedule-update` and `update`. `auto`, the default, lets Valendata pick: the skill's or step's own browser, and your Chrome when the cloud browser is paused. `cloud` is Valendata's cloud browser. `extension` is your own Chrome with the Valendata extension, which must be open; use it for sites that block cloud browsers. A workflow with `cloud` or `extension` runs every browser step there; leave a workflow that mixes both on `auto`.
+`--browser auto|cloud|extension` picks where the browser opens for `run`, `workflow`, `create`, `schedule`, `schedule-update` and `update`. `auto`, the default, uses the skill's or step's own saved browser, else the cloud browser; it never switches between the two by itself. `cloud` is Valendata's cloud browser. `extension` is your own Chrome with the Valendata extension, which must be open; use it for sites that block cloud browsers. A workflow with `cloud` or `extension` runs every browser step there; leave a workflow that mixes both on `auto`.
 
 ```bash
 npx valendata run google-maps-places-scraper search_query=dentist "location=Austin, TX" --browser extension
 ```
 
-When the cloud browser is paused, or your Chrome isn't connected, a run stops before it starts (nothing is charged) and the error says which `--browser` to try. A finished run says where it ran.
+When the cloud browser is unavailable, or your Chrome isn't connected, a run stops before it starts (nothing is charged) and the error says why. The CLI never retries on the other browser by itself: to run on your own Chrome instead (it uses your Chrome's sign-ins, which may be a different account), run the same command again with `--browser extension`. A finished run says where it ran.
 
 Skill inputs are `key=value` words; quote a value with spaces (`"location=Austin, TX"`). Every run spends credits from your account, and a retried run never starts a second paid run. `VALENDATA_API_URL` points the CLI at another server.
 

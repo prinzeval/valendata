@@ -7,7 +7,7 @@ import { browserFlag, browserType } from "../browser.mjs";
  * valendata update <slug> --browser auto|cloud|extension [--workflow]
  * Saves the browser a skill runs on when a run does not pick one (PATCH /v1/skills/{slug}); with
  * --workflow, the browser of every browser step in a workflow (PATCH /v1/workflows/{slug}).
- * auto takes the saved choice away, so Valendata picks again.
+ * auto takes the saved choice away: a skill runs on the cloud browser again, a workflow's steps on their own.
  */
 export async function update(ctx) {
   const { flags } = ctx.args;

@@ -35,13 +35,13 @@ The tools come from the MCP server named `valendata`: `search_skills`, `list_ski
 
 Runs, schedules and new skills can pick where the browser opens, with `browser`: `auto`, `cloud` or `extension`. `run_skill`, each `skill_<slug>`, `run_workflow`, each `workflow_<slug>`, `create_skill`, `schedule_skill`, `schedule_workflow` and `update_schedule` take it; `update_skill` and `update_workflow` save it for runs that do not pick one. Over HTTP it is `browser_type`: see [references/http-api.md](references/http-api.md).
 
-- **Leave it on `auto`** unless one of the cases below applies. Valendata uses the skill's or step's own browser, and moves the run to the user's Chrome when the cloud browser is paused.
-- **The cloud browser is paused** (a refusal says so, or `get_account` shows it): run again with `extension`.
-- **The user's Chrome is not connected** (a refusal says so): ask the user to open Chrome with the Valendata extension, or run again with `cloud`. Do not retry `extension` before they do.
+- **Leave it on `auto`** unless one of the cases below applies. `auto` is the skill's or step's own saved browser, else the cloud browser. Valendata never moves a run between the cloud browser and the user's Chrome by itself, in either direction.
+- **The cloud browser is paused** (a `cloud_browser_paused` refusal, or `get_account` shows it): nothing ran and nothing was charged. Tell the user why, in the refusal's own words (for example, the cloud browser's proxy is rejecting our login). Then ask whether to run it on their own Chrome instead, and say that it uses their Chrome's own sign-ins, which may be a different account. Only after they say yes, run the same thing again with `extension`. Never switch to the user's Chrome without asking.
+- **The user's Chrome is not connected** (an `extension_not_connected` refusal): ask the user to open Chrome with the Valendata extension, or whether to run it on the cloud browser instead (it uses the logins saved in Valendata, which may be a different account). Do not retry either browser before they answer.
 - **A site blocks cloud browsers** (runs fail as `blocked`, or stop at a human check every time): use `extension`, and save it with `update_skill` once it works.
 - **A workflow with steps on both browsers: leave `auto`.** It keeps each step's own browser. `cloud` or `extension` puts every browser step on that one, nested workflows included.
 
-A refused run started nothing and was not charged. A result's `browser_used` (`cloud` or `extension`) and `browser_note` say where it ran: pass the note on when the run moved to the user's Chrome.
+A refused run started nothing and was not charged. A result's `browser_used` (`cloud` or `extension`) and `browser_note` say where it ran: pass the note on.
 
 ## A page, a site or a search, without a skill
 
@@ -78,7 +78,7 @@ A tool error carries `error.code`:
 | `needs_user` | The user must act first. Show the message and link. |
 | `run_failed` | Read the reason and pass it on. A run keeps the credits it used, whatever the outcome. |
 | `invalid_arguments` | Fix the inputs from `get_skill`. |
-| `cloud_browser_paused` or `extension_not_connected` (409) | Nothing ran. Pick the other browser as Which browser says. |
+| `cloud_browser_paused` or `extension_not_connected` (409) | Nothing ran and nothing was charged. Tell the user why and ask before running it on the other browser, as Which browser says. Never switch by yourself. |
 
 ## Without the MCP tools
 
