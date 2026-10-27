@@ -46,8 +46,10 @@
       "browser": false,
       "tools": {
         "valendata": {
-          "slug": null,
-          "note": "No Walmart skill in the marketplace yet: create one first (valendata or the app), then put its slug here."
+          "slug": "walmart-product-search-bench",
+          "inputs": {
+            "query": "air fryer"
+          }
         },
         "firecrawl": {},
         "browser_use": {}
@@ -56,7 +58,7 @@
     {
       "id": "instagram",
       "title": "Instagram profile @nasa",
-      "prompt": "Open the Instagram profile https://www.instagram.com/nasa/ and return JSON with: followers, bio, and the latest 12 posts (link, caption, likes).",
+      "prompt": "Open the Instagram profile https://www.instagram.com/nasa/ and return the latest 12 posts as JSON objects with: link, caption, likes.",
       "url": "https://www.instagram.com/nasa/",
       "fields": [
         "link",
@@ -67,8 +69,10 @@
       "browser": false,
       "tools": {
         "valendata": {
-          "slug": null,
-          "note": "The marketplace Instagram skill has failed every run: build a fresh one first."
+          "slug": "instagram-profile-posts-bench",
+          "inputs": {
+            "username": "nasa"
+          }
         },
         "firecrawl": {},
         "apify": {
@@ -77,6 +81,12 @@
             "usernames": [
               "nasa"
             ]
+          },
+          "rows_from": "latestPosts",
+          "fields_map": {
+            "link": "url",
+            "caption": "caption",
+            "likes": "likesCount"
           }
         },
         "browser_use": {}
@@ -97,21 +107,26 @@
       "browser": true,
       "tools": {
         "valendata": {
-          "slug": "google-maps-places-search",
+          "slug": "google-maps-business-search-bench",
           "inputs": {
-            "query": "dentists in Austin, TX"
-          },
-          "verify": true
+            "query": "dentists in Austin TX"
+          }
         },
         "firecrawl": {},
         "apify": {
           "actor": "compass~crawler-google-places",
           "input": {
             "searchStringsArray": [
-              "dentists in Austin, TX"
+              "dentists in Austin TX"
             ],
             "maxCrawledPlacesPerSearch": 10,
             "language": "en"
+          },
+          "fields_map": {
+            "name": "title",
+            "phone": "phone",
+            "website": "website",
+            "rating": "totalScore"
           }
         },
         "browser_use": {}
@@ -129,14 +144,13 @@
         "link"
       ],
       "limit": 10,
-      "browser": true,
+      "browser": false,
       "tools": {
         "valendata": {
-          "slug": "zillow-homes-for-sale",
+          "slug": "zillow-homes-for-sale-bench",
           "inputs": {
-            "location": "Austin, TX"
-          },
-          "verify": true
+            "location": "austin-tx"
+          }
         },
         "firecrawl": {},
         "browser_use": {}

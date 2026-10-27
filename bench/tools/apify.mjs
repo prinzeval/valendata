@@ -25,11 +25,13 @@ export async function runApify({ task, config, keys, fetchImpl = fetch, sleep, n
   const items = run.status === "SUCCEEDED"
     ? await call(fetchImpl, keys.apify, "GET", `/datasets/${run.defaultDatasetId}/items?clean=true&limit=${task.limit}`)
     : [];
+  // Some actors return one object holding the rows (a profile with its latestPosts): read them from there.
+  const rows = config.rows_from ? (items[0]?.[config.rows_from] ?? []) : items;
   return {
     ok: run.status === "SUCCEEDED",
     status: run.status,
     seconds: (now() - started) / 1000,
-    output: items,
+    output: rows.slice(0, task.limit),
     usd: Number(run.usageTotalUsd ?? 0),
     spent: { usd: Number(run.usageTotalUsd ?? 0) },
     tokens: 0,

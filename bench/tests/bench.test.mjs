@@ -152,3 +152,16 @@ test("same answer is judged within one page version, so a page that changed is n
   const [shaky] = summarise([mk(1, "a", "rev:1"), mk(2, "c", "rev:1")]);
   assert.equal(shaky.same_answer_every_run, false);
 });
+
+test("an actor that returns one object holding the rows is read from that field", async () => {
+  const { now, sleep } = clock();
+  const fetchImpl = async (url) => {
+    const u = String(url);
+    if (u.endsWith("/runs")) return new Response(JSON.stringify({ data: { id: "a1", status: "RUNNING" } }));
+    if (u.includes("/actor-runs/")) return new Response(JSON.stringify({ data: { id: "a1", status: "SUCCEEDED", defaultDatasetId: "d1", usageTotalUsd: 0.01 } }));
+    return new Response(JSON.stringify([{ username: "nasa", latestPosts: [{ url: "p1", caption: "c", likesCount: 5 }, { url: "p2" }] }]));
+  };
+  const out = await runApify({ task, config: { actor: "x", input: {}, rows_from: "latestPosts" }, keys: { apify: "t" }, fetchImpl, now, sleep });
+  assert.equal(out.output.length, 2);
+  assert.equal(out.output[0].url, "p1");
+});
